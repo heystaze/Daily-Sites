@@ -1,0 +1,234 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Sites</title>
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Configure Tailwind with custom themes
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'theme-blue': '#3b82f6',
+            'theme-green': '#10b981',
+            'theme-purple': '#8b5cf6',
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+  <div id="root"></div>
+  <div id="fallback" class="container mx-auto p-6 text-center">
+    <p class="text-red-600">Loading... If this persists, JavaScript may have failed to load.</p>
+    <!-- Static fallback list for debugging -->
+    <div class="mt-4">
+      <h2 class="text-2xl font-bold">Fallback Website List</h2>
+      <div class="grid gap-4 mt-4">
+        <div class="bg-white p-4 rounded-lg shadow">
+          <h3 class="text-xl font-semibold">Web3 Social</h3>
+          <ul class="list-disc pl-5">
+            <li><a href="https://warpcast.com/heystaze" class="text-blue-600">Warpcast</a></li>
+            <li><a href="https://x.com/heyst3ze" class="text-blue-600">Twitter</a></li>
+            <li><a href="https://drip.haus/" class="text-blue-600">Drip haus</a></li>
+            <li><a href="https://hey.xyz/u/heystaze" class="text-blue-600">Hey social</a></li>
+          </ul>
+        </div>
+        <!-- Add other categories as needed -->
+      </div>
+    </div>
+  </div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const WebsiteList = () => {
+      const categories = [
+        {
+          name: "Web3 Social",
+          websites: [
+            { name: "Warpcast", url: "https://warpcast.com/heystaze" },
+            { name: "Twitter", url: "https://x.com/heyst3ze" },
+            { name: "Drip haus", url: "https://drip.haus/" },
+            { name: "Hey social", url: "https://hey.xyz/u/heystaze" },
+          ],
+        },
+        {
+          name: "Web3",
+          websites: [
+            { name: "Abstract Wallet", url: "https://www.abs.xyz/wallet" },
+            { name: "Relay Bridge", url: "https://relay.link/bridge" },
+            { name: "Jumper Bridge", url: "https://jumper.exchange/" },
+            { name: "Stargate Finance", url: "https://stargate.finance/" },
+            { name: "Layer3", url: "https://app.layer3.xyz/quests" },
+            { name: "Debank", url: "https://debank.com/" },
+            { name: "Superboard", url: "https://superboard.xyz/" },
+          ],
+        },
+        {
+          name: "AI",
+          websites: [
+            { name: "Grok", url: "https://grok.com/" },
+            { name: "DeepSeek", url: "https://chat.deepseek.com/" },
+            { name: "Gemini", url: "https://gemini.google.com/" },
+            { name: "ChatGPT", url: "https://chatgpt.com/" },
+            { name: "Claude", url: "https://claude.ai/new" },
+            { name: "Sora", url: "https://sora.chatgpt.com/explore/images" },
+          ],
+        },
+        {
+          name: "Web3 Tools",
+          websites: [
+            { name: "One click contract", url: "https://contracts.mintair.xyz/" },
+            { name: "Cryptorank", url: "https://cryptorank.io/" },
+            { name: "Coinmarketcap", url: "https://coinmarketcap.com/watchlist/" },
+            { name: "Crypto Converter", url: "https://www.coinbase.com/converter" },
+          ],
+        },
+        {
+          name: "Development",
+          websites: [
+            { name: "GitHub", url: "https://github.com" },
+          ],
+        },
+      ];
+
+      const [isDarkMode, setIsDarkMode] = useState(
+        localStorage.getItem('darkMode') === 'true' ||
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+      );
+      const [colorTheme, setColorTheme] = useState(
+        localStorage.getItem('colorTheme') || 'theme-blue'
+      );
+
+      useEffect(() => {
+        localStorage.setItem('darkMode', isDarkMode);
+        localStorage.setItem('colorTheme', colorTheme);
+        document.documentElement.classList.toggle('dark', isDarkMode);
+      }, [isDarkMode, colorTheme]);
+
+      const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+      const changeColorTheme = (theme) => setColorTheme(theme);
+
+      return (
+        <div className="container mx-auto p-6">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              My Daily Websites
+            </h1>
+            <div className="flex space-x-4">
+              <button
+                onClick={toggleDarkMode}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+              >
+                {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+              </button>
+              <div className="flex space-x-2">
+                {['theme-blue', 'theme-green', 'theme-purple'].map((theme) => (
+                  <button
+                    key={theme}
+                    onClick={() => changeColorTheme(theme)}
+                    className={`w-8 h-8 rounded-full ${theme === colorTheme ? 'ring-2 ring-offset-2 ring-gray-900 dark:ring-gray-100' : ''}`}
+                    style={{ backgroundColor: theme.replace('theme-', '') }}
+                    title={theme.replace('theme-', '')}
+                  ></button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {categories.map((category, index) => (
+              <div
+                key={index}
+                className={`bg-white dark:bg-gray-800 border-2 border-${colorTheme} rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 p-6`}
+              >
+                <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                  {category.name}
+                </h2>
+                <ul className="space-y-2">
+                  {category.websites.map((website, idx) => (
+                    <li key={idx}>
+                      <a
+                        href={website.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-${colorTheme} hover:underline`}
+                      >
+                        {website.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const App = () => <WebsiteList />;
+
+    try {
+      console.log('Attempting to render React app...');
+      if (!window.React || !window.ReactDOM || !window.Babel) {
+        throw new Error('Required libraries (React, ReactDOM, or Babel) not loaded.');
+      }
+      document.getElementById('fallback').style.display = 'none';
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+      console.log('React app rendered successfully.');
+    } catch (error) {
+      console.error('Rendering failed:', error);
+      document.getElementById('fallback').innerHTML = `
+        <p class="text-red-600">Error: Failed to load the app. Please check the console for details.</p>
+        <p class="text-gray-600 mt-2">The static fallback list below may still be usable.</p>
+      `;
+    }
+  </script>
+</body>
+</html>
